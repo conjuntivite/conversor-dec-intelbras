@@ -76,7 +76,18 @@
     $('form').addEventListener('submit', (e) => { e.preventDefault(); converter(); });
 
     $('copiar').addEventListener('click', async () => {
-      await navigator.clipboard.writeText($('hex').textContent);
+      const texto = $('hex').textContent;
+      // navigator.clipboard só existe em HTTPS/localhost; na rede interna (http://IP) usa o método antigo.
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(texto);
+      } else {
+        const t = document.createElement('textarea');
+        t.value = texto;
+        document.body.append(t);
+        t.select();
+        document.execCommand('copy');
+        t.remove();
+      }
       $('copiar').textContent = 'Copiado';
       setTimeout(() => ($('copiar').textContent = 'Copiar'), 1500);
     });
