@@ -83,7 +83,11 @@
       } else {
         const t = document.createElement('textarea');
         t.value = texto;
+        t.setAttribute('readonly', '');
+        t.style.position = 'fixed';
+        t.style.opacity = '0';
         document.body.append(t);
+        t.focus();
         t.select();
         document.execCommand('copy');
         t.remove();
