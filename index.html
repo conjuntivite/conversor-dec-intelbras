@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Conversor DEC ⇄ HEX</title>
+  <link rel="icon" type="image/svg+xml" href="design-system/brand/conversor-icon-light.svg" media="(prefers-color-scheme: light)">
+  <link rel="icon" type="image/svg+xml" href="design-system/brand/conversor-icon-dark.svg" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="design-system/tokens.css">
   <link rel="stylesheet" href="design-system/trade-ui.css">
   <style>
@@ -11,6 +13,12 @@
       box-sizing: border-box; background: var(--bg-page); color: var(--fg-primary); font-family: var(--font-sans); }
     main { width: 100%; max-width: 480px; display: grid; gap: var(--space-4); }
     .topo { display: flex; justify-content: space-between; align-items: center; }
+    .marca { display: flex; align-items: center; gap: var(--space-3); }
+    .marca img { width: 40px; height: 40px; }
+    .logo-escuro, [data-theme="dark"] .logo-claro { display: none; }
+    [data-theme="dark"] .logo-escuro { display: block; }
+    .rodape { margin: var(--space-4) 0 0; text-align: center; font-size: 12px; line-height: 16px; color: var(--fg-muted); }
+    .rodape a { color: var(--fg-secondary); font-weight: 500; }
     .topo h1 { margin: 0; font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.01em; }
     :where(.modos) button { border: 0; background: none; font-family: inherit; cursor: pointer; }
     .linhas { display: grid; }
@@ -33,7 +41,11 @@
 <body>
   <main>
     <div class="topo">
-      <h1>Conversor DEC ⇄ HEX</h1>
+      <div class="marca">
+        <img class="logo-claro" src="design-system/brand/conversor-icon-light.svg" alt="" aria-hidden="true">
+        <img class="logo-escuro" src="design-system/brand/conversor-icon-dark.svg" alt="" aria-hidden="true">
+        <h1>Conversor DEC ⇄ HEX</h1>
+      </div>
       <button id="tema" type="button" class="tu-btn tu-btn--ghost tu-btn--icon tu-btn--md tu-btn--pill" aria-label="Alternar tema claro/escuro">
         <span class="tu-btn__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></span>
       </button>
@@ -70,6 +82,11 @@
       <div class="tu-card__body"><div class="linhas" id="linhas"></div></div>
       <footer class="tu-card__footer"><p class="ajuda" id="ajuda"></p></footer>
     </section>
+
+    <footer class="rodape">
+      Sistema desenvolvido por <a href="https://github.com/conjuntivite" target="_blank" rel="noopener">@conjuntivite</a>.
+      © 2026 Todos os direitos reservados.
+    </footer>
   </main>
 
   <script src="conversor.js"></script>
