@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Conversor DEC → Intelbras</title>
+  <title>Conversor DEC ⇄ HEX</title>
   <link rel="stylesheet" href="design-system/tokens.css">
   <link rel="stylesheet" href="design-system/trade-ui.css">
   <style>
@@ -12,89 +12,151 @@
     main { width: 100%; max-width: 480px; display: grid; gap: var(--space-4); }
     .topo { display: flex; justify-content: space-between; align-items: center; }
     .topo h1 { margin: 0; font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.01em; }
-    form { display: grid; gap: var(--space-4); }
-    .resultado { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
-    .hex { margin: 0; font-family: var(--font-mono); font-size: 28px; line-height: 34px;
+    :where(.modos) button { border: 0; background: none; font-family: inherit; cursor: pointer; }
+    .linhas { display: grid; }
+    .linha { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-4) 0; }
+    .linha + .linha { border-top: 1px solid var(--border-subtle); }
+    .linha:first-child { padding-top: 0; }
+    .linha:last-child { padding-bottom: 0; }
+    .linha .tu-card__eyebrow { margin: 0 0 var(--space-1); }
+    .valor { margin: 0; font-family: var(--font-mono); font-size: 28px; line-height: 34px;
       font-variant-numeric: tabular-nums; letter-spacing: 0.04em; color: var(--fg-primary); overflow-wrap: anywhere; }
-    .hex:empty::before { content: '—'; color: var(--fg-muted); }
+    .valor:empty::before { content: '—'; color: var(--fg-muted); }
+    .nota { margin: var(--space-1) 0 0; font-size: 12px; line-height: 16px; color: var(--fg-secondary); }
+    .nota:empty { display: none; }
     .ajuda { margin: 0; font-size: 12px; line-height: 16px; color: var(--fg-secondary); }
   </style>
 </head>
 <body>
   <main>
     <div class="topo">
-      <h1>Conversor DEC → Intelbras</h1>
+      <h1>Conversor DEC ⇄ HEX</h1>
       <button id="tema" type="button" class="tu-btn tu-btn--ghost tu-btn--icon tu-btn--md tu-btn--pill" aria-label="Alternar tema claro/escuro">
         <span class="tu-btn__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></span>
       </button>
+    </div>
+
+    <div class="tu-nav__tabs modos" role="group" aria-label="Direção da conversão">
+      <button type="button" class="tu-nav__tab is-active" data-modo="dec" aria-pressed="true">DEC → HEX</button>
+      <button type="button" class="tu-nav__tab" data-modo="hex" aria-pressed="false">HEX → DEC</button>
     </div>
 
     <section class="tu-card tu-card--surface tu-card--pad-md">
       <div class="tu-card__body">
         <form id="form" novalidate>
           <div class="tu-field" id="campo">
-            <label class="tu-field__label" for="dec">Código decimal</label>
+            <label class="tu-field__label" for="entrada" id="rotulo"></label>
             <div class="tu-input tu-input--lg">
-              <input id="dec" class="tu-input__control" inputmode="numeric" autocomplete="off" placeholder="456566197" aria-describedby="dica" autofocus>
-              <span class="tu-input__suffix">DEC</span>
+              <input id="entrada" class="tu-input__control" autocomplete="off" spellcheck="false" aria-describedby="dica" autofocus>
+              <span class="tu-input__suffix" id="sufixo"></span>
             </div>
-            <p id="dica" class="tu-field__hint">Número de 0 a 4294967295.</p>
+            <p id="dica" class="tu-field__hint"></p>
           </div>
         </form>
       </div>
     </section>
 
     <section class="tu-card tu-card--elevated tu-card--pad-md" aria-live="polite">
-      <header class="tu-card__header"><div class="tu-card__heading"><p class="tu-card__eyebrow">Hexadecimal Intelbras</p></div></header>
-      <div class="tu-card__body">
-        <div class="resultado">
-          <p id="hex" class="hex"></p>
-          <button id="copiar" type="button" class="tu-btn tu-btn--primary tu-btn--md tu-btn--pill" disabled>Copiar</button>
-        </div>
-      </div>
-      <footer class="tu-card__footer"><p class="ajuda">Hex de 8 dígitos com os bytes em ordem invertida. Ex.: 456566197 → B5A5361B</p></footer>
+      <div class="tu-card__body"><div class="linhas" id="linhas"></div></div>
+      <footer class="tu-card__footer"><p class="ajuda" id="ajuda"></p></footer>
     </section>
   </main>
 
   <script src="conversor.js"></script>
   <script>
-    const $ = (id) => document.getElementById(id);
-    const dica = $('dica').textContent;
+    const MODOS = {
+      dec: {
+        rotulo: 'Código decimal', sufixo: 'DEC', placeholder: '456566197', inputmode: 'numeric',
+        dica: 'Número de 0 a 4294967295.', ler: lerDec,
+        ajuda: 'Intelbras = hex de 8 dígitos com os bytes invertidos. Ex.: 456566197 → 1B36A5B5 → B5A5361B',
+        saidas: [['Hexadecimal padrão', decParaHex], ['Hexadecimal Intelbras', decParaIntelbras]],
+      },
+      hex: {
+        rotulo: 'Código hexadecimal', sufixo: 'HEX', placeholder: 'B5A5361B', inputmode: 'text',
+        dica: 'Até 8 dígitos (0–9, A–F). Espaços e 0x são ignorados.', ler: lerHex,
+        ajuda: 'Use a linha que corresponde à origem do código: hex padrão ou hex copiado do leitor Intelbras.',
+        saidas: [['Decimal (hex padrão)', hexParaDec], ['Decimal (hex Intelbras)', intelbrasParaDec]],
+      },
+    };
 
-    function converter() {
-      const v = $('dec').value;
-      let hex = '', erro = '';
-      if (v.trim()) { try { hex = decParaIntelbras(v); } catch (e) { erro = e.message; } }
-      $('hex').textContent = hex;
-      $('copiar').disabled = !hex;
-      $('campo').classList.toggle('tu-field--error', !!erro);
-      $('dec').toggleAttribute('aria-invalid', !!erro);
-      $('dica').textContent = erro || dica;
+    const $ = (id) => document.getElementById(id);
+    let modo = MODOS.dec;
+
+    async function copiar(texto) {
+      // navigator.clipboard só existe em HTTPS/localhost; na rede interna (http://IP) usa o método antigo.
+      if (navigator.clipboard) return navigator.clipboard.writeText(texto);
+      const t = document.createElement('textarea');
+      t.value = texto;
+      t.setAttribute('readonly', '');
+      t.style.position = 'fixed';
+      t.style.opacity = '0';
+      document.body.append(t);
+      t.focus();
+      t.select();
+      document.execCommand('copy');
+      t.remove();
     }
 
-    $('dec').addEventListener('input', converter);
-    $('form').addEventListener('submit', (e) => { e.preventDefault(); converter(); });
-
-    $('copiar').addEventListener('click', async () => {
-      const texto = $('hex').textContent;
-      // navigator.clipboard só existe em HTTPS/localhost; na rede interna (http://IP) usa o método antigo.
-      if (navigator.clipboard) {
-        await navigator.clipboard.writeText(texto);
-      } else {
-        const t = document.createElement('textarea');
-        t.value = texto;
-        t.setAttribute('readonly', '');
-        t.style.position = 'fixed';
-        t.style.opacity = '0';
-        document.body.append(t);
-        t.focus();
-        t.select();
-        document.execCommand('copy');
-        t.remove();
+    function montarLinhas() {
+      $('linhas').innerHTML = '';
+      for (const [rotulo] of modo.saidas) {
+        const linha = document.createElement('div');
+        linha.className = 'linha';
+        linha.innerHTML = `<div><p class="tu-card__eyebrow"></p><p class="valor"></p><p class="nota"></p></div>
+          <button type="button" class="tu-btn tu-btn--secondary tu-btn--sm tu-btn--pill" disabled>Copiar</button>`;
+        linha.querySelector('.tu-card__eyebrow').textContent = rotulo;
+        const botao = linha.querySelector('button');
+        botao.setAttribute('aria-label', `Copiar ${rotulo}`);
+        botao.addEventListener('click', async () => {
+          botao.focus();
+          await copiar(linha.querySelector('.valor').textContent);
+          botao.textContent = 'Copiado';
+          setTimeout(() => (botao.textContent = 'Copiar'), 1500);
+        });
+        $('linhas').append(linha);
       }
-      $('copiar').textContent = 'Copiado';
-      setTimeout(() => ($('copiar').textContent = 'Copiar'), 1500);
-    });
+    }
+
+    function converter() {
+      const v = $('entrada').value;
+      let erro = '';
+      if (v.trim()) { try { modo.ler(v); } catch (e) { erro = e.message; } }
+      $('campo').classList.toggle('tu-field--error', !!erro);
+      $('entrada').toggleAttribute('aria-invalid', !!erro);
+      $('dica').textContent = erro || modo.dica;
+
+      const linhas = $('linhas').children;
+      modo.saidas.forEach(([, fn], i) => {
+        let valor = '', nota = '';
+        if (v.trim() && !erro) { try { valor = fn(v); } catch (e) { nota = e.message; } }
+        linhas[i].querySelector('.valor').textContent = valor;
+        linhas[i].querySelector('.nota').textContent = nota;
+        linhas[i].querySelector('button').disabled = !valor;
+      });
+    }
+
+    function trocarModo(chave) {
+      modo = MODOS[chave];
+      document.querySelectorAll('[data-modo]').forEach((b) => {
+        const ativo = b.dataset.modo === chave;
+        b.classList.toggle('is-active', ativo);
+        b.setAttribute('aria-pressed', ativo);
+      });
+      $('rotulo').textContent = modo.rotulo;
+      $('sufixo').textContent = modo.sufixo;
+      $('ajuda').textContent = modo.ajuda;
+      $('entrada').placeholder = modo.placeholder;
+      $('entrada').inputMode = modo.inputmode;
+      $('entrada').value = '';
+      montarLinhas();
+      converter();
+      $('entrada').focus();
+    }
+
+    document.querySelectorAll('[data-modo]').forEach((b) => b.addEventListener('click', () => trocarModo(b.dataset.modo)));
+    $('entrada').addEventListener('input', converter);
+    $('form').addEventListener('submit', (e) => { e.preventDefault(); converter(); });
+    trocarModo('dec');
 
     const html = document.documentElement;
     if (matchMedia('(prefers-color-scheme: dark)').matches) html.dataset.theme = 'dark';
