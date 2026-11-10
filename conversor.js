@@ -10,9 +10,9 @@ function lerDec(texto) {
   return n;
 }
 
-// Aceita "0x", espaços e minúsculas: "b5 a5 36 1b" -> "B5A5361B"
+// Aceita "0x", "HEX:" (como impresso nas tarjas), espaços e minúsculas: "b5 a5 36 1b" -> "B5A5361B"
 function lerHex(texto) {
-  const s = String(texto).replace(/\s+/g, '').replace(/^0x/i, '').toUpperCase();
+  const s = String(texto).replace(/\s+/g, '').replace(/^(0x|hex:)/i, '').toUpperCase();
   if (!/^[0-9A-F]+$/.test(s)) throw new Error('Digite apenas 0–9 e A–F.');
   if (s.replace(/^0+/, '').length > 8) throw new Error('O hex deve ter no máximo 8 dígitos (FFFFFFFF).');
   return s;
@@ -50,6 +50,8 @@ if (typeof module !== 'undefined') {
   assert.strictEqual(hexParaDec('1B36A5B5'), '456566197');
   assert.strictEqual(hexParaDec('0xff'), '255');
   assert.strictEqual(hexParaDec('FFFFFFFF'), '4294967295');
+  assert.strictEqual(hexParaDec('HEX:A11CEB'), '10558699'); // tarja veicular (Code 39)
+  assert.strictEqual(hexParaDec('A11CEA'), '10558698');
   assert.strictEqual(intelbrasParaDec('B5A5361B'), '456566197');
   assert.strictEqual(intelbrasParaDec('34 53 ac a5'), '2779534132');
   assert.strictEqual(intelbrasParaDec(decParaIntelbras('2876553983')), '2876553983');

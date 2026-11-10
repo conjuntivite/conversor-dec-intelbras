@@ -24,6 +24,9 @@
     .valor:empty::before { content: '—'; color: var(--fg-muted); }
     .nota { margin: var(--space-1) 0 0; font-size: 12px; line-height: 16px; color: var(--fg-secondary); }
     .nota:empty { display: none; }
+    #leitor { display: grid; gap: var(--space-3); }
+    #leitor[hidden], #video[hidden] { display: none; }
+    #video { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius-md); background: var(--bg-inverse); }
     .ajuda { margin: 0; font-size: 12px; line-height: 16px; color: var(--fg-secondary); }
   </style>
 </head>
@@ -52,6 +55,13 @@
             </div>
             <p id="dica" class="tu-field__hint"></p>
           </div>
+          <div id="leitor" hidden>
+            <button id="ler" type="button" class="tu-btn tu-btn--secondary tu-btn--md tu-btn--pill">
+              <span class="tu-btn__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M8 8v8M11 8v8M14 8v8M17 8v8"/></svg></span>
+              <span id="lerTexto">Ler código de barras</span>
+            </button>
+            <video id="video" muted playsinline hidden aria-label="Imagem da câmera"></video>
+          </div>
         </form>
       </div>
     </section>
@@ -63,6 +73,7 @@
   </main>
 
   <script src="conversor.js"></script>
+  <script src="vendor/zxing-library-0.21.3.min.js"></script>
   <script>
     const MODOS = {
       dec: {
@@ -74,7 +85,7 @@
       hex: {
         rotulo: 'Código hexadecimal', sufixo: 'HEX', placeholder: 'B5A5361B', inputmode: 'text',
         dica: 'Até 8 dígitos (0–9, A–F). Espaços e 0x são ignorados.', ler: lerHex,
-        ajuda: 'Use a linha que corresponde à origem do código: hex padrão ou hex copiado do leitor Intelbras.',
+        ajuda: 'Tarjas veiculares (HEX: na etiqueta) usam o hex padrão. O hex Intelbras é o de 8 dígitos dos leitores faciais.',
         saidas: [['Decimal (hex padrão)', hexParaDec], ['Decimal (hex Intelbras)', intelbrasParaDec]],
       },
     };
@@ -135,7 +146,46 @@
       });
     }
 
+    // Leitura de código de barras pela câmera (tarjas veiculares usam Code 39).
+    let leitor = null;
+
+    function mostrarErro(msg) {
+      $('campo').classList.add('tu-field--error');
+      $('dica').textContent = msg;
+    }
+
+    function pararLeitura() {
+      if (leitor) leitor.reset();
+      leitor = null;
+      $('video').hidden = true;
+      $('lerTexto').textContent = 'Ler código de barras';
+    }
+
+    async function iniciarLeitura() {
+      // getUserMedia só existe em HTTPS/localhost.
+      if (!navigator.mediaDevices?.getUserMedia) return mostrarErro('A câmera só funciona com o sistema aberto em HTTPS.');
+      const formatos = [ZXing.BarcodeFormat.CODE_39, ZXing.BarcodeFormat.CODE_128];
+      leitor = new ZXing.BrowserMultiFormatReader(new Map([[ZXing.DecodeHintType.POSSIBLE_FORMATS, formatos]]));
+      $('video').hidden = false;
+      $('lerTexto').textContent = 'Parar câmera';
+      try {
+        await leitor.decodeFromConstraints({ video: { facingMode: 'environment' } }, $('video'), (resultado) => {
+          if (!resultado) return;
+          $('entrada').value = resultado.getText();
+          pararLeitura();
+          converter();
+        });
+      } catch (e) {
+        pararLeitura();
+        mostrarErro(e.name === 'NotAllowedError' ? 'Permita o acesso à câmera no navegador.' : 'Não foi possível abrir a câmera.');
+      }
+    }
+
+    $('ler').addEventListener('click', () => (leitor ? pararLeitura() : iniciarLeitura()));
+
     function trocarModo(chave) {
+      pararLeitura();
+      $('leitor').hidden = chave !== 'hex';
       modo = MODOS[chave];
       document.querySelectorAll('[data-modo]').forEach((b) => {
         const ativo = b.dataset.modo === chave;
